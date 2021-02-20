@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SpecialOAuth2Client.php
  * Based on TwitterLogin by David Raison, which is based on the guideline published by Dave Challis at http://blogs.ecs.soton.ac.uk/webteam/2010/04/13/254/
@@ -14,12 +15,15 @@
  *
  */
 
-if ( !defined( 'MEDIAWIKI' ) ) {
-	die( 'This is a MediaWiki extension, and must be run from within MediaWiki.' );
+if (!defined('MEDIAWIKI')) {
+	die('This is a MediaWiki extension, and must be run from within MediaWiki.');
 }
-require __DIR__.'/JsonHelper.php';
+require __DIR__ . '/JsonHelper.php';
 
-class SpecialOAuth2Client extends SpecialPage {
+use League\OAuth2\Client\OptionProvider\HttpBasicAuthOptionProvider;
+
+class SpecialOAuth2Client extends SpecialPage
+{
 
 	private $_provider;
 
@@ -37,7 +41,8 @@ class SpecialOAuth2Client extends SpecialPage {
 	 * $wgOAuth2Client['configuration']['api_endpoint']
 	 * $wgOAuth2Client['configuration']['gamma_authority']
 	 */
-	public function __construct() {
+	public function __construct()
+	{
 
 		parent::__construct('OAuth2Client'); // ???: wat doet dit?
 		global $wgOAuth2Client, $wgScriptPath;
@@ -58,27 +63,28 @@ class SpecialOAuth2Client extends SpecialPage {
 	}
 
 	// default method being called by a specialpage
-	public function execute( $parameter ){
+	public function execute($parameter)
+	{
 		$this->setHeaders();
-		switch($parameter){
+		switch ($parameter) {
 			case 'redirect':
 				$this->_redirect();
-			break;
+				break;
 			case 'callback':
 				$this->_handleCallback();
-			break;
+				break;
 			default:
 				$this->_default();
-			break;
+				break;
 		}
-
 	}
 
-	private function _redirect() {
+	private function _redirect()
+	{
 
 		global $wgRequest, $wgOut;
 		$wgRequest->getSession()->persist();
-		$wgRequest->getSession()->set('returnto', $wgRequest->getVal( 'returnto' ));
+		$wgRequest->getSession()->set('returnto', $wgRequest->getVal('returnto'));
 
 		// Fetch the authorization URL from the provider; this returns the
 		// urlAuthorize option and generates and applies any necessary parameters
@@ -90,17 +96,18 @@ class SpecialOAuth2Client extends SpecialPage {
 		$wgRequest->getSession()->save();
 
 		// Redirect the user to the authorization URL.
-		$wgOut->redirect( $authorizationUrl );
+		$wgOut->redirect($authorizationUrl);
 	}
 
-	private function _handleCallback(){
+	private function _handleCallback()
+	{
 		global $wgRequest;
 
 		try {
 			$storedState = $wgRequest->getSession()->get('oauth2state');
 			// Enforce the `state` parameter to prevent clickjacking/CSRF
-			if(isset($storedState) && $storedState != $_GET['state']) {
-				if(isset($_GET['state'])) {
+			if (isset($storedState) && $storedState != $_GET['state']) {
+				if (isset($_GET['state'])) {
 					throw new UnexpectedValueException("State parameter of callback does not match original state");
 				} else {
 					throw new UnexpectedValueException("Required state parameter missing");
@@ -118,36 +125,36 @@ class SpecialOAuth2Client extends SpecialPage {
 		}
 
 		$resourceOwner = $this->_provider->getResourceOwner($accessToken);
-		$user = $this->_userHandling( $resourceOwner->toArray() );
+		$user = $this->_userHandling($resourceOwner->toArray());
 		$user->setCookies();
 
 		global $wgOut, $wgRequest;
 		$title = null;
 		$wgRequest->getSession()->persist();
-		if( $wgRequest->getSession()->exists('returnto') ) {
-			$title = Title::newFromText( $wgRequest->getSession()->get('returnto') );
+		if ($wgRequest->getSession()->exists('returnto')) {
+			$title = Title::newFromText($wgRequest->getSession()->get('returnto'));
 			$wgRequest->getSession()->remove('returnto');
 			$wgRequest->getSession()->save();
 		}
 
-		if( !$title instanceof Title || 0 > $title->getArticleID() ) {
+		if (!$title instanceof Title || 0 > $title->getArticleID()) {
 			$title = Title::newMainPage();
 		}
-		$wgOut->redirect( $title->getFullURL() );
+		$wgOut->redirect($title->getFullURL());
 		return true;
 	}
 
-	private function _default(){
+	private function _default()
+	{
 		global $wgOAuth2Client, $wgOut, $wgUser, $wgScriptPath, $wgExtensionAssetsPath;
-		$service_name = ( isset( $wgOAuth2Client['configuration']['service_name'] ) && 0 < strlen( $wgOAuth2Client['configuration']['service_name'] ) ? $wgOAuth2Client['configuration']['service_name'] : 'OAuth2' );
+		$service_name = (isset($wgOAuth2Client['configuration']['service_name']) && 0 < strlen($wgOAuth2Client['configuration']['service_name']) ? $wgOAuth2Client['configuration']['service_name'] : 'OAuth2');
 
-		$wgOut->setPagetitle( wfMessage( 'oauth2client-login-header', $service_name)->text() );
-		if ( !$wgUser->isLoggedIn() ) {
-			$wgOut->addWikiMsg( 'oauth2client-you-can-login-to-this-wiki-with-oauth2', $service_name );
-			$wgOut->addWikiMsg( 'oauth2client-login-with-oauth2', $this->getTitle( 'redirect' )->getPrefixedURL(), $service_name );
-
+		$wgOut->setPagetitle(wfMessage('oauth2client-login-header', $service_name)->text());
+		if (!$wgUser->isLoggedIn()) {
+			$wgOut->addWikiMsg('oauth2client-you-can-login-to-this-wiki-with-oauth2', $service_name);
+			$wgOut->addWikiMsg('oauth2client-login-with-oauth2', $this->getTitle('redirect')->getPrefixedURL(), $service_name);
 		} else {
-			$wgOut->addWikiMsg( 'oauth2client-youre-already-loggedin' );
+			$wgOut->addWikiMsg('oauth2client-youre-already-loggedin');
 		}
 		return true;
 	}
@@ -161,7 +168,8 @@ class SpecialOAuth2Client extends SpecialPage {
 	 * $wgOAuth2Client['configuration']['authz_callback']
 	 * $wgOAuth2Client['configuration']['authz_failure_message']
 	 */
-	protected function _userHandling( $response ) {
+	protected function _userHandling($response)
+	{
 		global $wgOAuth2Client, $wgAuth, $wgRequest;
 
 		if (
@@ -179,7 +187,7 @@ class SpecialOAuth2Client extends SpecialPage {
 
 		$authorities = JsonHelper::extractValue($response, 'authorities');
 		$authorized = false;
-		foreach($authorities as $item) { 
+		foreach ($authorities as $item) {
 			if ($item['authority'] == $wgOAuth2Client['configuration']['gamma_authority']) {
 				$authorized = true;
 			}
@@ -198,7 +206,7 @@ class SpecialOAuth2Client extends SpecialPage {
 		$user->setRealName($username);
 		$user->setEmail($email);
 		$user->load();
-		if ( !( $user instanceof User && $user->getId() ) ) {
+		if (!($user instanceof User && $user->getId())) {
 			$user->addToDatabase();
 			// MediaWiki recommends below code instead of addToDatabase to create user but it seems to fail.
 			// $authManager = MediaWiki\Auth\AuthManager::singleton();
@@ -210,7 +218,7 @@ class SpecialOAuth2Client extends SpecialPage {
 		// Setup the session
 		$wgRequest->getSession()->persist();
 		$user->setCookies();
-		$this->getContext()->setUser( $user );
+		$this->getContext()->setUser($user);
 		$user->saveSettings();
 		global $wgUser;
 		$wgUser = $user;
@@ -218,5 +226,4 @@ class SpecialOAuth2Client extends SpecialPage {
 		$sessionUser->load();
 		return $user;
 	}
-
 }
