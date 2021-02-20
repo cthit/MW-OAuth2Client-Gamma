@@ -35,6 +35,7 @@ class SpecialOAuth2Client extends SpecialPage {
 	 * $wgOAuth2Client['configuration']['http_bearer_token']
 	 * $wgOAuth2Client['configuration']['query_parameter_token']
 	 * $wgOAuth2Client['configuration']['api_endpoint']
+	 * $wgOAuth2Client['configuration']['gamma_authority']
 	 */
 	public function __construct() {
 
@@ -51,7 +52,8 @@ class SpecialOAuth2Client extends SpecialPage {
 			'urlAuthorize'            => $wgOAuth2Client['configuration']['authorize_endpoint'],
 			'urlAccessToken'          => $wgOAuth2Client['configuration']['access_token_endpoint'],
 			'urlResourceOwnerDetails' => $wgOAuth2Client['configuration']['api_endpoint'],
-			'scopes'                  => $wgOAuth2Client['configuration']['scopes']
+			'scopes'                  => $wgOAuth2Client['configuration']['scopes'],
+			'optionProvider' 		  => new HttpBasicAuthOptionProvider()
 		]);
 	}
 
@@ -174,6 +176,19 @@ class SpecialOAuth2Client extends SpecialPage {
 
 		$username = JsonHelper::extractValue($response, $wgOAuth2Client['configuration']['username']);
 		$email =  JsonHelper::extractValue($response, $wgOAuth2Client['configuration']['email']);
+
+		$authorities = JsonHelper::extractValue($response, 'authorities');
+		$authorized = false;
+		foreach($authorities as $item) { 
+			if ($item['authority'] == $wgOAuth2Client['configuration']['gamma_authority']) {
+				$authorized = true;
+			}
+		}
+
+		if (!$authorized) {
+			throw new MWException('User not authorized');
+			die();
+		}
 
 		$user = User::newFromName($username, 'creatable');
 		if (!$user) {
