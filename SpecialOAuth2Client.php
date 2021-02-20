@@ -58,8 +58,9 @@ class SpecialOAuth2Client extends SpecialPage
 			'urlAccessToken'          => $wgOAuth2Client['configuration']['access_token_endpoint'],
 			'urlResourceOwnerDetails' => $wgOAuth2Client['configuration']['api_endpoint'],
 			'scopes'                  => $wgOAuth2Client['configuration']['scopes'],
-			'optionProvider' 		  => new HttpBasicAuthOptionProvider()
 		]);
+
+		$this->_provider->setOptionProvider(new HttpBasicAuthOptionProvider());
 	}
 
 	// default method being called by a specialpage
