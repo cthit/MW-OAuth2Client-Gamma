@@ -186,11 +186,26 @@ class SpecialOAuth2Client extends SpecialPage
 		$username = JsonHelper::extractValue($response, $wgOAuth2Client['configuration']['username']);
 		$email =  JsonHelper::extractValue($response, $wgOAuth2Client['configuration']['email']);
 
-		$authorities = JsonHelper::extractValue($response, 'authorities');
+		$groups = JsonHelper::extractValue($response, "groups");
+		$group_names = [];
+		foreach ($groups as $group) {
+			$group_name = $group["name"];
+			$super_group_name = $group["superGroup"]["name"];
+			if (!in_array($super_group_name, $group_names)) {
+				array_push($group_names, $super_group_name);
+			}
+
+			if (!in_array($group_name, $group_names)) {
+				array_push($group_names, $group_name);
+			}
+		}
+
 		$authorized = false;
-		foreach ($authorities as $item) {
-			if ($item['authority'] == $wgOAuth2Client['configuration']['gamma_authority']) {
+		$authorized_groups = explode(",", $wgOAuth2Client['configuration']['authorized_groups']);
+		foreach ($group_names as $group_name) {
+			if (in_array($group_name, $authorized_groups)) {
 				$authorized = true;
+				break;
 			}
 		}
 
