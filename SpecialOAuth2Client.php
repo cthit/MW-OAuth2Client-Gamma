@@ -202,6 +202,9 @@ class SpecialOAuth2Client extends SpecialPage
 
 		$authorized = false;
 		$authorized_groups = explode(",", $wgOAuth2Client['configuration']['authorized_groups']);
+		$authorized_groups = array_filter($authorized_groups, function ($group) {
+			return trim($group) != "";
+		});
 		if (empty($authorized_groups)) {
 			$authorized = true;
 		} else {
